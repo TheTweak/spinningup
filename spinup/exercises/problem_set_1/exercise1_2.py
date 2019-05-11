@@ -1,7 +1,6 @@
 import tensorflow as tf
 import numpy as np
 from spinup.exercises.problem_set_1 import exercise1_1
-
 """
 
 Exercise 1.2: PPO Gaussian Policy
@@ -33,12 +32,11 @@ def mlp(x, hidden_sizes=(32,), activation=tf.tanh, output_activation=None):
         A TF symbol for the output of an MLP that takes x as an input.
 
     """
-    #######################
-    #                     #
-    #   YOUR CODE HERE    #
-    #                     #
-    #######################
-    pass
+    for h in hidden_sizes[:-1]:
+        x = tf.layers.Dense(h, activation=activation)(x)
+    if len(hidden_sizes) > 1:
+        x = tf.layers.Dense(hidden_sizes[-1], activation=output_activation)(x)
+    return x
 
 def mlp_gaussian_policy(x, a, hidden_sizes, activation, output_activation, action_space):
     """
@@ -72,14 +70,11 @@ def mlp_gaussian_policy(x, a, hidden_sizes, activation, output_activation, actio
             Gaussian distribution.
 
     """
-    #######################
-    #                     #
-    #   YOUR CODE HERE    #
-    #                     #
-    #######################
-    # mu = 
-    # log_std = 
-    # pi = 
+    a_shape = tf.shape(a)[1]
+    mu = mlp(x)
+    log_std = tf.get_variable('log_std', a_shape, initializer=np.array([-0.5]*a_shape))
+    dist = tf.distributions.Normal(mu, log_std)
+    pi = dist.sample()
 
     logp = exercise1_1.gaussian_likelihood(a, mu, log_std)
     logp_pi = exercise1_1.gaussian_likelihood(pi, mu, log_std)
