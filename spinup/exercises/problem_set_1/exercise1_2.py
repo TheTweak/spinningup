@@ -70,12 +70,14 @@ def mlp_gaussian_policy(x, a, hidden_sizes, activation, output_activation, actio
             Gaussian distribution.
 
     """
-    a_shape = tf.shape(a)[1]
-    mu = mlp(x)
-    log_std = tf.get_variable('log_std', a_shape, initializer=np.array([-0.5]*a_shape))
+    a_shape = tf.shape(a)
+    log_std = tf.reshape(tf.constant(-0.5), a_shape)
+    mu = mlp(x, hidden_sizes=hidden_sizes, activation=activation, output_activation=output_activation)
+    #log_std = tf.get_variable('log_std', a_shape,
+    #                          initializer=tf.constant(),
+    #                          dtype=tf.float16)
     dist = tf.distributions.Normal(mu, log_std)
     pi = dist.sample()
-
     logp = exercise1_1.gaussian_likelihood(a, mu, log_std)
     logp_pi = exercise1_1.gaussian_likelihood(pi, mu, log_std)
     return pi, logp, logp_pi
@@ -95,7 +97,7 @@ if __name__ == '__main__':
     import time
 
     logdir = "/tmp/experiments/%i"%int(time.time())
-    ppo(env_fn = lambda : gym.make('InvertedPendulum-v2'),
+    ppo(env_fn = lambda : gym.make('CartPole-v0'),
         ac_kwargs=dict(policy=mlp_gaussian_policy, hidden_sizes=(64,)),
         steps_per_epoch=4000, epochs=20, logger_kwargs=dict(output_dir=logdir))
 
