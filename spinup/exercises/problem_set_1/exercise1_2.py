@@ -70,24 +70,39 @@ def mlp_gaussian_policy(x, a, hidden_sizes, activation, output_activation, actio
             Gaussian distribution.
 
     """
-    a_shape = tf.shape(a)
-    log_std = tf.reshape(tf.constant(-0.5), a_shape)
-    mu = mlp(x, hidden_sizes=hidden_sizes, activation=activation, output_activation=output_activation)
-    #log_std = tf.get_variable('log_std', a_shape,
-    #                          initializer=tf.constant(),
-    #                          dtype=tf.float16)
-    dist = tf.distributions.Normal(mu, log_std)
+    act_dim = a.shape.as_list()[-1]
+    log_std = tf.get_variable(name='log_std', initializer=-0.5 * np.ones(act_dim, dtype=np.float32))
+    mu = mlp(x, hidden_sizes=list(hidden_sizes) + [act_dim], activation=activation, output_activation=output_activation)
+    std = tf.exp(log_std)
+    dist = tf.distributions.Normal(mu, std, validate_args=True)
     pi = dist.sample()
     logp = exercise1_1.gaussian_likelihood(a, mu, log_std)
     logp_pi = exercise1_1.gaussian_likelihood(pi, mu, log_std)
     return pi, logp, logp_pi
 
 
+def mlp_gaussian_t():
+    sess = tf.Session()
+
+    dim = 2
+    x = tf.placeholder(tf.float32, shape=(None, dim))
+    a = tf.placeholder(tf.float32, shape=(None, dim))
+
+    pi = mlp_gaussian_policy(x, a, (64,), tf.tanh, tf.tanh, 2)
+
+    batch_size = 32
+    feed_dict = {x: np.random.rand(batch_size, dim),
+                 a: np.random.rand(batch_size, dim)}
+    sess.run(tf.global_variables_initializer())
+    result = sess.run([pi], feed_dict=feed_dict)
+    print()
+
+
 if __name__ == '__main__':
+    #mlp_gaussian_t()
     """
     Run this file to verify your solution.
     """
-
     from spinup import ppo
     from spinup.exercises.common import print_result
     import gym
@@ -95,11 +110,15 @@ if __name__ == '__main__':
     import pandas as pd
     import psutil
     import time
+    from spinup.algos.ppo import core
 
     logdir = "/tmp/experiments/%i"%int(time.time())
-    ppo(env_fn = lambda : gym.make('CartPole-v0'),
+    ppo(env_fn = lambda : gym.make('MountainCarContinuous-v0'),
         ac_kwargs=dict(policy=mlp_gaussian_policy, hidden_sizes=(64,)),
         steps_per_epoch=4000, epochs=20, logger_kwargs=dict(output_dir=logdir))
+    '''ppo(env_fn = lambda : gym.make('MountainCarContinuous-v0'),
+        ac_kwargs=dict(policy=core.mlp_gaussian_policy, hidden_sizes=(64,)),
+        steps_per_epoch=4000, epochs=20, logger_kwargs=dict(output_dir=logdir))'''
 
     # Get scores from last five epochs to evaluate success.
     data = pd.read_table(os.path.join(logdir,'progress.txt'))
