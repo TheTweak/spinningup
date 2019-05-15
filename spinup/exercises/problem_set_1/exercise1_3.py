@@ -174,8 +174,38 @@ def td3(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
         #   YOUR CODE HERE    #
         #                     #
         #######################
-        # pi, q1, q2, q1_pi = 
-        pass
+        # pi, q1, q2, q1_pi =
+        from spinup.exercises.problem_set_1.exercise1_2 import mlp
+        with tf.variable_scope('pi'):
+            net = mlp(x_ph, (32, 32), activation=tf.tanh)
+            pi = tf.layers.Dense(1, activation=None)(net)
+
+        def create_fcn(name=None, inputs=None, num_units=64, inputs_shape=None):
+            if inputs_shape is None:
+                inputs_dim = inputs.shape.as_list()[-1]
+            else:
+                inputs_dim = inputs_shape
+            w = tf.get_variable(name=f'{name}_w',
+                                initializer=tf.initializers.glorot_normal(),
+                                shape=(inputs_dim, num_units))
+            b = tf.get_variable(name=f'{name}_b',
+                                initializer=tf.initializers.glorot_normal(),
+                                shape=num_units)
+            y = tf.matmul(inputs, w) + b
+            return y
+
+        def create_q_net(name=None, states=None, actions=None, num_units=64, actions_input_shape=None):
+            with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
+                s_layer = create_fcn(name='states', inputs=states, num_units=num_units)
+                s_layer = create_fcn(name='states_final', inputs=s_layer, num_units=1, inputs_shape=num_units)
+                a_layer = create_fcn(name='actions', inputs=actions, num_units=num_units,
+                                     inputs_shape=actions_input_shape)
+                a_layer = create_fcn(name='actions_final', inputs=a_layer, num_units=1, inputs_shape=num_units)
+            return tf.add(a_layer, s_layer, name='states_plus_actions')
+
+        q1 = create_q_net(name='q1', states=x_ph, actions=a_ph)
+        q2 = create_q_net(name='q2', states=x_ph, actions=a_ph)
+        q1_pi = create_q_net(name='q1', states=x_ph, actions=pi, actions_input_shape=act_dim)
     
     # Target policy network
     with tf.variable_scope('target'):
@@ -357,8 +387,55 @@ def td3(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
             logger.log_tabular('Time', time.time()-start_time)
             logger.dump_tabular()
 
+
+def qnet_test():
+    def create_fcn(name=None, inputs=None, num_units=64, inputs_shape=None):
+        if inputs_shape is None:
+            inputs_dim = inputs.shape.as_list()[-1]
+        else:
+            inputs_dim = inputs_shape
+        w = tf.get_variable(name=f'{name}_w',
+                            initializer=tf.initializers.glorot_normal(),
+                            shape=(inputs_dim, num_units))
+        b = tf.get_variable(name=f'{name}_b',
+                            initializer=tf.initializers.glorot_normal(),
+                            shape=num_units)
+        y = tf.matmul(inputs, w) + b
+        return y
+
+    def create_q_net(name=None, states=None, actions=None, num_units=64, actions_input_shape=None):
+        with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
+            s_layer = create_fcn(name='states', inputs=states, num_units=num_units)
+            s_layer = create_fcn(name='states_final', inputs=s_layer, num_units=1, inputs_shape=num_units)
+            a_layer = create_fcn(name='actions', inputs=actions, num_units=num_units,
+                                 inputs_shape=actions_input_shape)
+            a_layer = create_fcn(name='actions_final', inputs=a_layer, num_units=1, inputs_shape=num_units)
+        return tf.add(a_layer, s_layer, name='states_plus_actions')
+
+    x_ph = tf.placeholder(tf.float32, shape=(None, 2))
+    a_ph = tf.placeholder(tf.float32, shape=(None, 1))
+
+    from spinup.exercises.problem_set_1.exercise1_2 import mlp
+    with tf.variable_scope('pi'):
+        net = mlp(x_ph, (32, 32), activation=tf.tanh)
+        pi = tf.layers.Dense(1, activation=None)(net)
+
+    q1 = create_q_net(name='q1', states=x_ph, actions=a_ph)
+    q2 = create_q_net(name='q2', states=x_ph, actions=a_ph)
+    q1_pi = create_q_net(name='q1', states=x_ph, actions=pi, actions_input_shape=1)
+
+    sess = tf.Session()
+    feed_dict = {x_ph: np.random.rand(32, 2),
+                 a_ph: np.random.rand(32, 1)}
+    train_writer = tf.summary.FileWriter('tensorboard', sess.graph)
+    sess.run(tf.global_variables_initializer())
+    result = sess.run([q1_pi, q1, q2], feed_dict=feed_dict)
+    pass
+
+
 if __name__ == '__main__':
-    import argparse
+    qnet_test()
+    '''import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--env', type=str, default='HalfCheetah-v2')
     parser.add_argument('--seed', '-s', type=int, default=0)
@@ -382,4 +459,4 @@ if __name__ == '__main__':
     if args.use_soln:
         true_td3(**all_kwargs)
     else:
-        td3(**all_kwargs)
+        td3(**all_kwargs)'''
