@@ -175,7 +175,8 @@ def td3(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
         #                     #
         #######################
         # pi, q1, q2, q1_pi =
-        from spinup.exercises.problem_set_1.exercise1_2 import mlp
+        pi, q1, q2, q1_pi = core.mlp_actor_critic(x_ph, a_ph, hidden_sizes=ac_kwargs['hidden_sizes'], action_space=env.action_space)
+        '''from spinup.exercises.problem_set_1.exercise1_2 import mlp
         with tf.variable_scope('pi'):
             net = mlp(x_ph, (32, 32), activation=tf.tanh)
             pi = tf.layers.Dense(1, activation=None)(net)
@@ -205,7 +206,7 @@ def td3(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
 
         q1 = create_q_net(name='q1', states=x_ph, actions=a_ph)
         q2 = create_q_net(name='q2', states=x_ph, actions=a_ph)
-        q1_pi = create_q_net(name='q1', states=x_ph, actions=pi, actions_input_shape=act_dim)
+        q1_pi = create_q_net(name='q1', states=x_ph, actions=pi, actions_input_shape=act_dim)'''
     
     # Target policy network
     with tf.variable_scope('target'):
@@ -215,9 +216,11 @@ def td3(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
         #                     #
         #######################
         # pi_targ =
-        with tf.variable_scope('pi_targ'):
+        '''with tf.variable_scope('pi_targ'):
             net = mlp(x2_ph, (32, 32), activation=tf.tanh)
-            pi_targ = tf.layers.Dense(1, activation=None)(net)
+            pi_targ = tf.layers.Dense(1, activation=None)(net)'''
+        pi_targ, _, _, _ = core.mlp_actor_critic(x_ph, a_ph, hidden_sizes=ac_kwargs['hidden_sizes'],
+                                                  action_space=env.action_space)
     
     # Target Q networks
     with tf.variable_scope('target', reuse=True):
@@ -238,8 +241,10 @@ def td3(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
         #   YOUR CODE HERE    #
         #                     #
         #######################
-        q1_target = create_q_net(name='q1', states=x_ph, actions=a_targ)
-        q2_target = create_q_net(name='q2', states=x_ph, actions=a_targ)
+        '''q1_target = create_q_net(name='q1', states=x_ph, actions=a_targ)
+        q2_target = create_q_net(name='q2', states=x_ph, actions=a_targ)'''
+        _, q1_target, q2_target, _ = core.mlp_actor_critic(x_ph, a_targ, hidden_sizes=ac_kwargs['hidden_sizes'],
+                                                           action_space=env.action_space)
         pass
 
     # Experience buffer
@@ -310,6 +315,7 @@ def td3(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
             while not(d or (ep_len == max_ep_len)):
                 # Take deterministic actions at test time (noise_scale=0)
                 o, r, d, _ = test_env.step(get_action(o, 0))
+                test_env.render()
                 ep_ret += r
                 ep_len += 1
             logger.store(TestEpRet=ep_ret, TestEpLen=ep_len)
@@ -333,6 +339,8 @@ def td3(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
 
         # Step the env
         o2, r, d, _ = env.step(a)
+        if t > start_steps:
+            o2 = np.squeeze(o2)
         ep_ret += r
         ep_len += 1
 
@@ -473,10 +481,10 @@ if __name__ == '__main__':
         env_fn=lambda : gym.make(args.env), 
         actor_critic=core.mlp_actor_critic,
         ac_kwargs=dict(hidden_sizes=[128,128]), 
-        max_ep_len=150,
+        max_ep_len=250,
         seed=args.seed, 
         logger_kwargs=logger_kwargs,
-        epochs=10
+        epochs=100
         )
     
     if args.use_soln:
