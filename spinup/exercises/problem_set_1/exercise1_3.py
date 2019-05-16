@@ -215,7 +215,9 @@ def td3(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
         #                     #
         #######################
         # pi_targ =
-        pass
+        with tf.variable_scope('pi_targ'):
+            net = mlp(x2_ph, (32, 32), activation=tf.tanh)
+            pi_targ = tf.layers.Dense(1, activation=None)(net)
     
     # Target Q networks
     with tf.variable_scope('target', reuse=True):
@@ -226,6 +228,9 @@ def td3(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
         #   YOUR CODE HERE    #
         #                     #
         #######################
+        noise = tf.random_normal([act_dim], stddev=target_noise, name='target_noise')
+        noise = tf.clip_by_value(noise, -noise_clip, noise_clip)
+        a_targ = tf.clip_by_value(tf.add(pi_targ, noise, name='pi_add_noise'), -act_limit, act_limit)
 
         # Target Q-values, using action from smoothed target policy
         #######################
@@ -233,6 +238,8 @@ def td3(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
         #   YOUR CODE HERE    #
         #                     #
         #######################
+        q1_target = create_q_net(name='q1', states=x_ph, actions=a_targ)
+        q2_target = create_q_net(name='q2', states=x_ph, actions=a_targ)
         pass
 
     # Experience buffer
@@ -248,6 +255,7 @@ def td3(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
     #   YOUR CODE HERE    #
     #                     #
     #######################
+    y_target = r_ph + gamma*tf.minimum(q1_target, q2_target)
 
     # TD3 losses
     #######################
@@ -258,8 +266,12 @@ def td3(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
     # pi_loss = 
     # q1_loss = 
     # q2_loss = 
-    # q_loss = 
-
+    # q_loss =
+    n_obs = tf.cast(tf.shape(x_ph)[0], tf.float32)
+    pi_loss = tf.divide(tf.reduce_sum(q1_pi, axis=0), n_obs)
+    q1_loss = tf.divide(tf.reduce_sum(tf.pow(q1-y_target, 2), axis=0), n_obs)
+    q2_loss = tf.divide(tf.reduce_sum(tf.pow(q2-y_target, 2), axis=0), n_obs)
+    q_loss = q1_loss + q2_loss
     #=========================================================================#
     #                                                                         #
     #           All of your code goes in the space above.                     #
@@ -424,18 +436,29 @@ def qnet_test():
     q2 = create_q_net(name='q2', states=x_ph, actions=a_ph)
     q1_pi = create_q_net(name='q1', states=x_ph, actions=pi, actions_input_shape=1)
 
+    act_dim = 1
+    target_noise = 0.5
+    noise_clip = 0.3
+    act_limit = 1
+    noise = tf.random_normal([act_dim], stddev=target_noise, name='target_noise')
+    noise = tf.clip_by_value(noise, -noise_clip, noise_clip)
+    with tf.variable_scope('pi_targ'):
+        net = mlp(x_ph, (32, 32), activation=tf.tanh)
+        pi_targ = tf.layers.Dense(1, activation=None)(net)
+    a_targ = tf.clip_by_value(tf.add(pi_targ, noise, name='pi_add_noise'), -act_limit, act_limit)
+    a_targ = tf.divide(a_targ, tf.cast(tf.shape(x_ph)[0], tf.float32))
     sess = tf.Session()
     feed_dict = {x_ph: np.random.rand(32, 2),
                  a_ph: np.random.rand(32, 1)}
     train_writer = tf.summary.FileWriter('tensorboard', sess.graph)
     sess.run(tf.global_variables_initializer())
-    result = sess.run([q1_pi, q1, q2], feed_dict=feed_dict)
+    result = sess.run([a_targ], feed_dict=feed_dict)
     pass
 
 
 if __name__ == '__main__':
-    qnet_test()
-    '''import argparse
+    #qnet_test()
+    import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--env', type=str, default='HalfCheetah-v2')
     parser.add_argument('--seed', '-s', type=int, default=0)
@@ -459,4 +482,4 @@ if __name__ == '__main__':
     if args.use_soln:
         true_td3(**all_kwargs)
     else:
-        td3(**all_kwargs)'''
+        td3(**all_kwargs)
