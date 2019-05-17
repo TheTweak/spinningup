@@ -238,7 +238,7 @@ def td3(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
     # q2_loss = 
     # q_loss =
     n_obs = tf.cast(tf.shape(x_ph)[0], tf.float32)
-    pi_loss = tf.divide(tf.reduce_sum(q1_pi, axis=0), n_obs)
+    pi_loss = -tf.divide(tf.reduce_sum(q1_pi, axis=0), n_obs)
     q1_loss = tf.divide(tf.reduce_sum(tf.pow(q1-y_target, 2), axis=0), n_obs)
     q2_loss = tf.divide(tf.reduce_sum(tf.pow(q2-y_target, 2), axis=0), n_obs)
     q_loss = q1_loss + q2_loss
@@ -270,7 +270,7 @@ def td3(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
     logger.setup_tf_saver(sess, inputs={'x': x_ph, 'a': a_ph}, outputs={'pi': pi, 'q1': q1, 'q2': q2})
 
     def get_action(o, noise_scale):
-        a = sess.run(pi, feed_dict={x_ph: o.reshape(1,-1)})
+        a = sess.run(pi, feed_dict={x_ph: o.reshape(1,-1)})[0]
         a += noise_scale * np.random.randn(act_dim)
         return np.clip(a, -act_limit, act_limit)
 
@@ -279,7 +279,8 @@ def td3(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
             o, r, d, ep_ret, ep_len = test_env.reset(), 0, False, 0, 0
             while not(d or (ep_len == max_ep_len)):
                 # Take deterministic actions at test time (noise_scale=0)
-                o, r, d, _ = test_env.step(get_action(o, 0))
+                action = get_action(o, 0)
+                o, r, d, _ = test_env.step(action)
                 test_env.render()
                 ep_ret += r
                 ep_len += 1
@@ -304,8 +305,6 @@ def td3(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
 
         # Step the env
         o2, r, d, _ = env.step(a)
-        if t > start_steps:
-            o2 = np.squeeze(o2)
         ep_ret += r
         ep_len += 1
 
