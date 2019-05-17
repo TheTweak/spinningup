@@ -175,38 +175,8 @@ def td3(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
         #                     #
         #######################
         # pi, q1, q2, q1_pi =
-        pi, q1, q2, q1_pi = core.mlp_actor_critic(x_ph, a_ph, hidden_sizes=ac_kwargs['hidden_sizes'], action_space=env.action_space)
-        '''from spinup.exercises.problem_set_1.exercise1_2 import mlp
-        with tf.variable_scope('pi'):
-            net = mlp(x_ph, (32, 32), activation=tf.tanh)
-            pi = tf.layers.Dense(1, activation=None)(net)
-
-        def create_fcn(name=None, inputs=None, num_units=64, inputs_shape=None):
-            if inputs_shape is None:
-                inputs_dim = inputs.shape.as_list()[-1]
-            else:
-                inputs_dim = inputs_shape
-            w = tf.get_variable(name=f'{name}_w',
-                                initializer=tf.initializers.glorot_normal(),
-                                shape=(inputs_dim, num_units))
-            b = tf.get_variable(name=f'{name}_b',
-                                initializer=tf.initializers.glorot_normal(),
-                                shape=num_units)
-            y = tf.matmul(inputs, w) + b
-            return y
-
-        def create_q_net(name=None, states=None, actions=None, num_units=64, actions_input_shape=None):
-            with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
-                s_layer = create_fcn(name='states', inputs=states, num_units=num_units)
-                s_layer = create_fcn(name='states_final', inputs=s_layer, num_units=1, inputs_shape=num_units)
-                a_layer = create_fcn(name='actions', inputs=actions, num_units=num_units,
-                                     inputs_shape=actions_input_shape)
-                a_layer = create_fcn(name='actions_final', inputs=a_layer, num_units=1, inputs_shape=num_units)
-            return tf.add(a_layer, s_layer, name='states_plus_actions')
-
-        q1 = create_q_net(name='q1', states=x_ph, actions=a_ph)
-        q2 = create_q_net(name='q2', states=x_ph, actions=a_ph)
-        q1_pi = create_q_net(name='q1', states=x_ph, actions=pi, actions_input_shape=act_dim)'''
+        pi, q1, q2, q1_pi = core.mlp_actor_critic(x_ph, a_ph, hidden_sizes=ac_kwargs['hidden_sizes'],
+                                                  action_space=env.action_space)
     
     # Target policy network
     with tf.variable_scope('target'):
@@ -216,11 +186,8 @@ def td3(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
         #                     #
         #######################
         # pi_targ =
-        '''with tf.variable_scope('pi_targ'):
-            net = mlp(x2_ph, (32, 32), activation=tf.tanh)
-            pi_targ = tf.layers.Dense(1, activation=None)(net)'''
         pi_targ, _, _, _ = core.mlp_actor_critic(x_ph, a_ph, hidden_sizes=ac_kwargs['hidden_sizes'],
-                                                  action_space=env.action_space)
+                                                 action_space=env.action_space)
     
     # Target Q networks
     with tf.variable_scope('target', reuse=True):
@@ -241,8 +208,6 @@ def td3(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
         #   YOUR CODE HERE    #
         #                     #
         #######################
-        '''q1_target = create_q_net(name='q1', states=x_ph, actions=a_targ)
-        q2_target = create_q_net(name='q2', states=x_ph, actions=a_targ)'''
         _, q1_target, q2_target, _ = core.mlp_actor_critic(x_ph, a_targ, hidden_sizes=ac_kwargs['hidden_sizes'],
                                                            action_space=env.action_space)
         pass
@@ -481,10 +446,10 @@ if __name__ == '__main__':
         env_fn=lambda : gym.make(args.env), 
         actor_critic=core.mlp_actor_critic,
         ac_kwargs=dict(hidden_sizes=[128,128]), 
-        max_ep_len=250,
+        max_ep_len=150,
         seed=args.seed, 
         logger_kwargs=logger_kwargs,
-        epochs=100
+        epochs=10
         )
     
     if args.use_soln:
