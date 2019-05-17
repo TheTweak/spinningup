@@ -186,7 +186,7 @@ def td3(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
         #                     #
         #######################
         # pi_targ =
-        pi_targ, _, _, _ = core.mlp_actor_critic(x_ph, a_ph, hidden_sizes=ac_kwargs['hidden_sizes'],
+        pi_targ, _, _, _ = core.mlp_actor_critic(x2_ph, a_ph, hidden_sizes=ac_kwargs['hidden_sizes'],
                                                  action_space=env.action_space)
     
     # Target Q networks
@@ -208,7 +208,7 @@ def td3(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
         #   YOUR CODE HERE    #
         #                     #
         #######################
-        _, q1_target, q2_target, _ = core.mlp_actor_critic(x_ph, a_targ, hidden_sizes=ac_kwargs['hidden_sizes'],
+        _, q1_target, q2_target, _ = core.mlp_actor_critic(x2_ph, a_targ, hidden_sizes=ac_kwargs['hidden_sizes'],
                                                            action_space=env.action_space)
         pass
 
